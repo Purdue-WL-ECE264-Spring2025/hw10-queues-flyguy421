@@ -30,17 +30,15 @@ bool states_equal(struct game_state s1, struct game_state s2) {
     return 1;
 }
 
-bool been_visited(struct queue *q, struct game_state state) {
+bool been_visited(struct game_state * visited, int visited_count, struct game_state state) {
     // iterate through queue to check if state has already been visited
 
-    struct list_node * current = q->data.head;
-    while (current) {
-        struct game_state current_state = deserialize(current->value);
-        if (states_equal(current_state, state)) {
+    for (int i = 0; i < visited_count; i++) {
+        if (states_equal(visited[i], state)) {
             return true;
         }
-        current = current->next;
     }
+
     return false;
 }
 
@@ -62,9 +60,7 @@ int number_of_moves(struct game_state start) {
     // return -1 if not solvable
 
     struct queue q;
-    struct queue v;
     q.data.head = NULL;
-    v.data.head = NULL;
 
     struct game_state target = {.tiles = {{1, 2, 3, 4}, {5, 6, 7, 8}, {9, 10, 11, 12}, {13, 14, 15, 0}}, 
                                 .empty_row = 3,
@@ -77,12 +73,16 @@ int number_of_moves(struct game_state start) {
     }
 
     enqueue(&q, start);
-    enqueue(&v, start);
+
+    struct game_state visited[100000];
+    int visited_count = 0;
 
     while(q.data.head) {
         struct game_state current = dequeue(&q);
+        visited[visited_count++] = current;
 
         if (states_equal(current, target)) {
+            free_list(q.data);
             return current.num_steps;
         }
 
@@ -96,23 +96,20 @@ int number_of_moves(struct game_state start) {
         move_left(&left);
         move_right(&right);
 
-        if (!states_equal(up, current) && !been_visited(&v, up)) {
+        if (!states_equal(up, current) && !been_visited(visited, visited_count, up)) {
             enqueue(&q, up);
-            enqueue(&v, up);
         }
-        if (!states_equal(down, current) && !been_visited(&v, down)) {
+        if (!states_equal(down, current) && !been_visited(visited, visited_count, down)) {
             enqueue(&q, down);
-            enqueue(&v, down);
         }
-        if (!states_equal(left, current) && !been_visited(&v, left)) {
+        if (!states_equal(left, current) && !been_visited(visited, visited_count, left)) {
             enqueue(&q, left);
-            enqueue(&v, left);
         }
-        if (!states_equal(right, current) && !been_visited(&v, right)) {
+        if (!states_equal(right, current) && !been_visited(visited, visited_count, right)) {
             enqueue(&q, right);
-            enqueue(&v, right);
         }
     }
 
+    free_list(q.data);
     return -1;
 }
